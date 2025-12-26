@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:CaloriesTracker}",
+            "name": "Debug CaloriesTracker",
+            "target": "CaloriesTracker",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug CaloriesTracker"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:CaloriesTracker}",
+            "name": "Release CaloriesTracker",
+            "target": "CaloriesTracker",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release CaloriesTracker"
+        }
+    ]
+}
