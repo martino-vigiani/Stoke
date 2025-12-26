@@ -3,83 +3,144 @@ import SwiftUI
 struct SettingsView: View {
     @AppStorage("selectedLanguage") private var selectedLanguage: String = "en"
     @AppStorage("calorieUnit") private var calorieUnit: String = "kcal"
-    @AppStorage("enableDarkMode") private var enableDarkMode: Bool = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.gray.opacity(0.1),
-                        Color.blue.opacity(0.05)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+        ZStack {
+            AppTheme.surface.ignoresSafeArea()
 
-                VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: AppTheme.spacing4) {
                     // Header
-                    VStack {
-                        Text("Settings")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.gray.gradient)
+                    Text("Settings")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(AppTheme.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, AppTheme.spacing2)
 
-                    Form {
-                        Section("App Settings") {
-                            Picker("Language", selection: $selectedLanguage) {
-                                Text("English").tag("en")
-                                Text("Español").tag("es")
-                                Text("Français").tag("fr")
-                                Text("Italiano").tag("it")
-                                Text("Deutsch").tag("de")
+                    // Preferences
+                    VStack(spacing: AppTheme.spacing2) {
+                        SectionHeader(title: "Preferences")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        LiquidGlassCard {
+                            VStack(spacing: 0) {
+                                SettingRow(
+                                    icon: "globe",
+                                    label: "Language",
+                                    value: languageName(selectedLanguage)
+                                )
+
+                                SeparatorLine()
+                                    .padding(.vertical, 16)
+
+                                SettingRow(
+                                    icon: "flame",
+                                    label: "Calorie Unit",
+                                    value: calorieUnit == "kcal" ? "Kilocalories" : "Kilojoules"
+                                )
                             }
-
-                            Toggle("Dark Mode", isOn: $enableDarkMode)
                         }
+                    }
 
-                        Section("Calorie Tracking") {
-                            Picker("Calorie Unit", selection: $calorieUnit) {
-                                Text("kcal (Kilocalories)").tag("kcal")
-                                Text("kJ (Kilojoules)").tag("kj")
+                    // About
+                    VStack(spacing: AppTheme.spacing2) {
+                        SectionHeader(title: "About")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        LiquidGlassCard {
+                            VStack(spacing: 0) {
+                                InfoRow(label: "Version", value: "1.0.0")
+
+                                SeparatorLine()
+                                    .padding(.vertical, 16)
+
+                                InfoRow(label: "Build", value: "2024.12.26")
                             }
+                        }
+                    }
 
-                            HStack {
-                                Text("Conversion Rate")
-                                    .foregroundColor(.gray)
-                                Spacer()
+                    // Conversion Info
+                    if calorieUnit == "kj" {
+                        LiquidGlassCard {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "info.circle.fill")
+                                        .foregroundColor(AppTheme.textSecondary)
+                                    Text("Conversion")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(AppTheme.textSecondary)
+                                }
+
                                 Text("1 kcal = 4.184 kJ")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-
-                        Section("About") {
-                            HStack {
-                                Text("Version")
-                                    .foregroundColor(.gray)
-                                Spacer()
-                                Text("1.0.0")
-                                    .foregroundColor(.gray)
-                            }
-
-                            HStack {
-                                Text("Developer")
-                                    .foregroundColor(.gray)
-                                Spacer()
-                                Text("Calories Tracker")
-                                    .foregroundColor(.gray)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(AppTheme.text)
                             }
                         }
                     }
+
+                    Spacer(minLength: 100)
                 }
+                .padding(AppTheme.spacing3)
             }
-            .navigationBarHidden(true)
+        }
+    }
+
+    private func languageName(_ code: String) -> String {
+        switch code {
+        case "en": return "English"
+        case "es": return "Español"
+        case "fr": return "Français"
+        case "it": return "Italiano"
+        case "de": return "Deutsch"
+        default: return "English"
+        }
+    }
+}
+
+struct SettingRow: View {
+    let icon: String
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundColor(AppTheme.text)
+                .frame(width: 28)
+
+            Text(label)
+                .font(.system(size: 16))
+                .foregroundColor(AppTheme.text)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 15))
+                .foregroundColor(AppTheme.textSecondary)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(AppTheme.textSecondary)
+        }
+    }
+}
+
+struct InfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 15))
+                .foregroundColor(AppTheme.textSecondary)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(AppTheme.text)
         }
     }
 }

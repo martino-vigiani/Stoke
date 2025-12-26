@@ -1,296 +1,250 @@
 import SwiftUI
 import SwiftData
-import Charts
 
 struct TodayBalanceView: View {
     @Environment(\.modelContext) var modelContext
     @Query var profiles: [UserProfile]
-    @Query(sort: \DailyBalance.date, order: .reverse) var dailyBalances: [DailyBalance]
-    @State private var selectedDay: Date = Date()
-
-    var todayBalance: DailyBalance? {
-        let calendar = Calendar.current
-        return dailyBalances.first { balance in
-            calendar.isDateInToday(balance.date)
-        }
-    }
+    @Query(sort: \FoodEntry.timestamp, order: .reverse) var allEntries: [FoodEntry]
 
     var userProfile: UserProfile? {
         profiles.first
     }
 
+    var todayEntries: [FoodEntry] {
+        let calendar = Calendar.current
+        return allEntries.filter { calendar.isDateInToday($0.timestamp) }
+    }
+
+    var totalCalories: Int {
+        todayEntries.reduce(0) { $0 + $1.calories }
+    }
+
+    var totalProtein: Double {
+        todayEntries.reduce(0) { $0 + $1.protein }
+    }
+
+    var totalCarbs: Double {
+        todayEntries.reduce(0) { $0 + $1.carbs }
+    }
+
+    var totalFats: Double {
+        todayEntries.reduce(0) { $0 + $1.fats }
+    }
+
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.green.opacity(0.1),
-                        Color.blue.opacity(0.1)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+        ZStack {
+            AppTheme.surface.ignoresSafeArea()
 
-                VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: AppTheme.spacing4) {
                     // Header
-                    VStack {
-                        Text("Today's Balance")
-                            .font(.headline)
-                            .foregroundColor(.white)
+                    Text("Today")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(AppTheme.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, AppTheme.spacing2)
+
+                    // Calories Summary
+                    LiquidGlassCard {
+                        VStack(spacing: AppTheme.spacing3) {
+                            HStack(alignment: .firstTextBaseline) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Calories")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(AppTheme.textSecondary)
+                                    Text("\(totalCalories)")
+                                        .font(.system(size: 48, weight: .bold))
+                                        .foregroundColor(AppTheme.text)
+                                }
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 4) {
+                                    Text("Goal")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(AppTheme.textSecondary)
+                                    Text("\(userProfile?.dailyCalorieGoal ?? 2000)")
+                                        .font(.system(size: 24, weight: .semibold))
+                                        .foregroundColor(AppTheme.textSecondary)
+                                }
+                            }
+
+                            // Progress Bar
+                            GeometryReader { geometry in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(AppTheme.separator)
+
+                                    let progress = Double(totalCalories) / Double(userProfile?.dailyCalorieGoal ?? 2000)
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.black)
+                                        .frame(width: geometry.size.width * min(progress, 1.0))
+                                }
+                            }
+                            .frame(height: 8)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.green.gradient)
 
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            // Calories summary
-                            if let balance = todayBalance {
-                                CalorieSummaryCard(
-                                    consumed: balance.totalCalories,
-                                    goal: userProfile?.dailyCalorieGoal ?? 2000
+                    // Macros Breakdown
+                    VStack(spacing: AppTheme.spacing2) {
+                        SectionHeader(title: "Macronutrients")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        LiquidGlassCard {
+                            HStack(spacing: 12) {
+                                MacroProgressCard(
+                                    label: "Protein",
+                                    current: totalProtein,
+                                    goal: userProfile?.proteinGoalGrams ?? 100
                                 )
-
-                                // Macros breakdown
-                                MacrosBreakdownCard(
-                                    balance: balance,
-                                    profile: userProfile
+                                MacroProgressCard(
+                                    label: "Carbs",
+                                    current: totalCarbs,
+                                    goal: userProfile?.carbsGoalGrams ?? 250
                                 )
-
-                                // Food entries list
-                                if !balance.foodEntries.isEmpty {
-                                    FoodEntriesListView(entries: balance.foodEntries)
-                                } else {
-                                    VStack(spacing: 12) {
-                                        Image(systemName: "fork.knife")
-                                            .font(.system(size: 40))
-                                            .foregroundColor(.gray)
-                                        Text("No food entries yet")
-                                            .foregroundColor(.gray)
-                                        Text("Add some food to see your daily balance")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(40)
-                                }
-                            } else {
-                                VStack(spacing: 12) {
-                                    Image(systemName: "chart.pie")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.gray)
-                                    Text("No data for today")
-                                        .foregroundColor(.gray)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(40)
+                                MacroProgressCard(
+                                    label: "Fats",
+                                    current: totalFats,
+                                    goal: userProfile?.fatsGoalGrams ?? 65
+                                )
                             }
                         }
-                        .padding()
                     }
-                }
-            }
-            .navigationBarHidden(true)
-        }
-    }
-}
 
-struct CalorieSummaryCard: View {
-    let consumed: Int
-    let goal: Int
+                    // Food Entries
+                    if !todayEntries.isEmpty {
+                        VStack(spacing: AppTheme.spacing2) {
+                            SectionHeader(title: "Meals")
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-    var remaining: Int {
-        max(0, goal - consumed)
-    }
-
-    var progress: Double {
-        Double(consumed) / Double(goal)
-    }
-
-    var body: some View {
-        VStack(spacing: 20) {
-            HStack(spacing: 30) {
-                VStack(alignment: .center, spacing: 8) {
-                    Text("Consumed")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text("\(consumed)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text("kcal")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-
-                Divider()
-
-                VStack(alignment: .center, spacing: 8) {
-                    Text("Remaining")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text("\(remaining)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(remaining < 0 ? .red : .green)
-                    Text("kcal")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-            }
-
-            // Progress bar
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Daily Progress")
-                        .font(.caption)
-                    Spacer()
-                    Text("\(Int(progress * 100))%")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                }
-                .foregroundColor(.gray)
-
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.2))
-
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [.green, .blue]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: geometry.size.width * min(progress, 1.0))
+                            LiquidGlassCard {
+                                VStack(spacing: 16) {
+                                    ForEach(Array(todayEntries.enumerated()), id: \.element.id) { index, entry in
+                                        if index > 0 {
+                                            SeparatorLine()
+                                        }
+                                        FoodEntryRow(entry: entry)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        LiquidGlassCard {
+                            VStack(spacing: 16) {
+                                Image(systemName: "fork.knife.circle")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(AppTheme.textSecondary)
+                                Text("No meals logged today")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(AppTheme.text)
+                                Text("Start tracking your meals from the Home tab")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(AppTheme.textSecondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding(.vertical, AppTheme.spacing3)
+                        }
                     }
+
+                    Spacer(minLength: 100)
                 }
-                .frame(height: 12)
+                .padding(AppTheme.spacing3)
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
     }
 }
 
-struct MacrosBreakdownCard: View {
-    let balance: DailyBalance
-    let profile: UserProfile?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Macros Breakdown")
-                .font(.headline)
-
-            HStack(spacing: 16) {
-                MacroProgressRing(
-                    label: "Protein",
-                    value: Int(balance.totalProtein),
-                    goal: Int(profile?.proteinGoalGrams ?? 100),
-                    color: .red
-                )
-
-                MacroProgressRing(
-                    label: "Carbs",
-                    value: Int(balance.totalCarbs),
-                    goal: Int(profile?.carbsGoalGrams ?? 250),
-                    color: .orange
-                )
-
-                MacroProgressRing(
-                    label: "Fats",
-                    value: Int(balance.totalFats),
-                    goal: Int(profile?.fatsGoalGrams ?? 65),
-                    color: .yellow
-                )
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
-}
-
-struct MacroProgressRing: View {
+struct MacroProgressCard: View {
     let label: String
-    let value: Int
-    let goal: Int
-    let color: Color
+    let current: Double
+    let goal: Double
 
     var progress: Double {
-        Double(value) / Double(goal)
+        current / goal
     }
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             ZStack {
-                Circle()
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                ProgressRing(progress: 0, lineWidth: 6, color: AppTheme.separator)
+                ProgressRing(progress: min(progress, 1.0), lineWidth: 6, color: .black)
 
-                Circle()
-                    .trim(from: 0, to: min(progress, 1.0))
-                    .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-
-                VStack(spacing: 4) {
-                    Text("\(value)")
-                        .font(.headline)
-                    Text(label)
-                        .font(.caption2)
-                        .foregroundColor(.gray)
+                VStack(spacing: 2) {
+                    Text("\(Int(current))")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(AppTheme.text)
+                    Text("g")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppTheme.textSecondary)
                 }
             }
             .frame(height: 80)
 
-            Text("\(goal)g")
-                .font(.caption)
-                .foregroundColor(.gray)
+            VStack(spacing: 4) {
+                Text(label)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppTheme.text)
+                Text("\(Int(goal))g")
+                    .font(.system(size: 11))
+                    .foregroundColor(AppTheme.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct FoodEntryRow: View {
+    let entry: FoodEntry
+
+    var body: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(entry.foodName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppTheme.text)
+
+                Text(entry.portionSize)
+                    .font(.system(size: 13))
+                    .foregroundColor(AppTheme.textSecondary)
+
+                HStack(spacing: 12) {
+                    MacroTag(label: "P", value: entry.protein)
+                    MacroTag(label: "C", value: entry.carbs)
+                    MacroTag(label: "F", value: entry.fats)
+                }
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("\(entry.calories)")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(AppTheme.text)
+                Text("kcal")
+                    .font(.system(size: 11))
+                    .foregroundColor(AppTheme.textSecondary)
+            }
         }
     }
 }
 
-struct FoodEntriesListView: View {
-    let entries: [FoodEntry]
+struct MacroTag: View {
+    let label: String
+    let value: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Food Entries")
-                .font(.headline)
-
-            VStack(spacing: 8) {
-                ForEach(entries, id: \.id) { entry in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(entry.foodName)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            Text(entry.portionSize)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("\(entry.calories) kcal")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            Text("P:\(String(format: "%.0f", entry.protein))g C:\(String(format: "%.0f", entry.carbs))g")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .padding(8)
-                    .background(Color.white.opacity(0.5))
-                    .cornerRadius(8)
-                }
-            }
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(AppTheme.textSecondary)
+            Text("\(Int(value))g")
+                .font(.system(size: 10))
+                .foregroundColor(AppTheme.textSecondary)
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(AppTheme.surfaceSecondary)
+        )
     }
 }
 

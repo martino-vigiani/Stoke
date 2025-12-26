@@ -6,80 +6,98 @@ struct HomeView: View {
     @StateObject private var foodParsingService = FoodParsingService()
     @State private var foodDescription: String = ""
     @State private var lastParsedFood: FoodParsingResponse?
-    @State private var showError: Bool = false
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Navbar
-                VStack {
-                    Text("What did you eat?")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.blue.gradient)
+        ZStack {
+            AppTheme.surface.ignoresSafeArea()
 
-                // Main content
-                VStack(spacing: 20) {
-                    // Text input
-                    TextEditor(text: $foodDescription)
-                        .frame(minHeight: 150)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
-                        .placeholder(when: foodDescription.isEmpty) {
-                            Text("e.g., 2 eggs, toast with butter, orange juice")
-                                .foregroundColor(.gray)
-                                .padding(8)
-                        }
-
-                    // Submit button
-                    Button(action: parseFoodDescription) {
-                        if foodParsingService.isLoading {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Text("Parse Food")
-                        }
+            ScrollView {
+                VStack(spacing: AppTheme.spacing4) {
+                    // Header
+                    VStack(spacing: 8) {
+                        Text("What did you eat?")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(AppTheme.text)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .disabled(foodDescription.isEmpty || foodParsingService.isLoading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, AppTheme.spacing2)
 
-                    // Error display
+                    // Input Area
+                    VStack(spacing: AppTheme.spacing2) {
+                        TextEditor(text: $foodDescription)
+                            .font(.system(size: 16))
+                            .foregroundColor(AppTheme.text)
+                            .scrollContentBackground(.hidden)
+                            .frame(minHeight: 120)
+                            .padding(AppTheme.spacing2)
+                            .background(
+                                RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
+                                    .fill(AppTheme.surfaceSecondary)
+                            )
+                            .overlay(
+                                Group {
+                                    if foodDescription.isEmpty {
+                                        VStack {
+                                            HStack {
+                                                Text("e.g., 2 eggs, avocado toast, coffee...")
+                                                    .font(.system(size: 16))
+                                                    .foregroundColor(AppTheme.textSecondary)
+                                                    .padding(.leading, AppTheme.spacing2 + 4)
+                                                    .padding(.top, AppTheme.spacing2 + 8)
+                                                Spacer()
+                                            }
+                                            Spacer()
+                                        }
+                                    }
+                                }
+                            )
+
+                        // Analyze Button
+                        Button(action: parseFoodDescription) {
+                            HStack(spacing: 12) {
+                                if foodParsingService.isLoading {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Image(systemName: "sparkles")
+                                    Text("Analyze")
+                                }
+                            }
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
+                                    .fill(foodDescription.isEmpty || foodParsingService.isLoading ? Color.gray : Color.black)
+                            )
+                        }
+                        .disabled(foodDescription.isEmpty || foodParsingService.isLoading)
+                    }
+
+                    // Error Display
                     if let error = foodParsingService.lastError {
-                        HStack(spacing: 12) {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundColor(.red)
-                            Text(error)
-                                .font(.caption)
-                            Spacer()
+                        LiquidGlassCard {
+                            HStack(spacing: 12) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundColor(.red)
+                                Text(error)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(AppTheme.text)
+                                Spacer()
+                            }
                         }
-                        .padding()
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(8)
                     }
 
-                    // Results display
+                    // Results Display
                     if let food = lastParsedFood {
                         FoodResultCard(food: food, onAdd: addFoodEntry)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 100)
                 }
-                .padding()
+                .padding(AppTheme.spacing3)
             }
-            .navigationTitle("")
-            .navigationBarHidden(true)
         }
     }
 
@@ -112,71 +130,92 @@ struct FoodResultCard: View {
     let onAdd: (FoodParsingResponse) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
+        LiquidGlassCard {
+            VStack(spacing: AppTheme.spacing3) {
+                // Header
+                VStack(alignment: .leading, spacing: 8) {
                     Text(food.foodName)
-                        .font(.headline)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(AppTheme.text)
+
                     Text(food.portionSize)
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                        .font(.system(size: 14))
+                        .foregroundColor(AppTheme.textSecondary)
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("\(food.calories) kcal")
-                        .font(.headline)
-                        .foregroundColor(.blue)
-                }
-            }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Divider()
+                SeparatorLine()
 
-            HStack(spacing: 20) {
-                VStack(alignment: .center, spacing: 4) {
-                    Text("Protein")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text("\(String(format: "%.1f", food.macros.protein))g")
-                        .font(.headline)
+                // Calories
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Total Calories")
+                            .font(.system(size: 13))
+                            .foregroundColor(AppTheme.textSecondary)
+                        Text("\(food.calories)")
+                            .font(.system(size: 36, weight: .bold))
+                            .foregroundColor(AppTheme.text)
+                        Text("kcal")
+                            .font(.system(size: 13))
+                            .foregroundColor(AppTheme.textSecondary)
+                    }
+                    Spacer()
                 }
-                VStack(alignment: .center, spacing: 4) {
-                    Text("Carbs")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text("\(String(format: "%.1f", food.macros.carbs))g")
-                        .font(.headline)
-                }
-                VStack(alignment: .center, spacing: 4) {
-                    Text("Fats")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text("\(String(format: "%.1f", food.macros.fats))g")
-                        .font(.headline)
-                }
-                Spacer()
-            }
 
-            Button(action: { onAdd(food) }) {
-                Text("Add to Today")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.green)
+                SeparatorLine()
+
+                // Macros
+                VStack(spacing: AppTheme.spacing2) {
+                    SectionHeader(title: "Macronutrients")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    HStack(spacing: 12) {
+                        MacroItem(label: "Protein", value: food.macros.protein)
+                        MacroItem(label: "Carbs", value: food.macros.carbs)
+                        MacroItem(label: "Fats", value: food.macros.fats)
+                    }
+                }
+
+                // Add Button
+                Button(action: { onAdd(food) }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add to Today")
+                    }
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white)
-                    .cornerRadius(8)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
+                            .fill(Color.black)
+                    )
+                }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
     }
 }
 
-extension View {
-    func placeholder<Content: View>(when shouldShow: Bool, alignment: Alignment = .leading, @ViewBuilder placeholder: () -> Content) -> some View {
-        ZStack(alignment: alignment) {
-            placeholder().opacity(shouldShow ? 1 : 0)
-            self
+struct MacroItem: View {
+    let label: String
+    let value: Double
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundColor(AppTheme.textSecondary)
+
+            Text("\(String(format: "%.1f", value))g")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(AppTheme.text)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
+                .fill(AppTheme.surfaceSecondary)
+        )
     }
 }
 
