@@ -5,13 +5,14 @@ actor DataController {
 
     private init() {}
 
-    nonisolated static var preview: ModelContext {
-        let modelContext = ModelContext(
-            ModelContainer(
-                for: FoodEntry.self, UserProfile.self, DailyBalance.self,
-                isStoredInMemoryOnly: true
-            )
-        )
+    nonisolated static var preview: ModelContainer {
+        let schema = Schema([
+            FoodEntry.self,
+            UserProfile.self,
+            DailyBalance.self,
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: [modelConfiguration])
 
         let sampleProfile = UserProfile(
             name: "Demo User",
@@ -20,9 +21,11 @@ actor DataController {
             age: 28,
             dailyCalorieGoal: 2000
         )
+
+        let modelContext = ModelContext(container)
         modelContext.insert(sampleProfile)
 
-        return modelContext
+        return container
     }
 
     static func container() throws -> ModelContainer {

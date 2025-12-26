@@ -1,6 +1,6 @@
 import Foundation
 
-class FoodParsingService: ObservableObject {
+class FoodParsingService: ObservableObject, @unchecked Sendable {
     @Published var isLoading: Bool = false
     @Published var lastError: String?
 

@@ -1,7 +1,9 @@
 import Foundation
 
-class APIClient {
-    static let shared = APIClient()
+nonisolated(unsafe) let defaultAPIClient = APIClient()
+
+class APIClient: @unchecked Sendable {
+    static let shared: APIClient = defaultAPIClient
 
     private let baseURL: URL
     private let session: URLSession
